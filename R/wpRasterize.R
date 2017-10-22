@@ -27,7 +27,7 @@ wpStartRasterize <- function(x,
   layernames <- names(x)
 
 
-  blocks <- blockSize(x,minblocks=minblk)
+  blocks <- raster::blockSize(x,minblocks=minblk)
 
   cat('\n')
   cat('Rasterising')
@@ -35,7 +35,7 @@ wpStartRasterize <- function(x,
   if (minblk != blocks$n) cat(paste0('\nTotal blocks ',blocks$n))
   cat('\n')
 
-  cl <- getCluster()
+  cl <- raster::getCluster()
 
   #on.exit( returnCluster() )
   nodes <- length(cl)
@@ -50,7 +50,7 @@ wpStartRasterize <- function(x,
 
         clRasteriseFun <- function(i) {
           # tryCatch({
-                v <- data.frame( getValues(x, row=blocks$row[i], nrows=blocks$nrows[i]) )
+                v <- data.frame( raster::getValues(x, row=blocks$row[i], nrows=blocks$nrows[i]) )
                 colnames(v) <- c("v1")
                 colnames(df) <- c("v1","v2")
                 v <- plyr::join(v,df,type="left",by = "v1")[-1]
@@ -63,12 +63,12 @@ wpStartRasterize <- function(x,
 
   # get all nodes going
   for (i in 1:nodes) {
-    sendCall(cl[[i]], clRasteriseFun, i, tag=i)
+    parallel::sendCall(cl[[i]], clRasteriseFun, i, tag=i)
   }
 
-  out <- setValues(x, 0)
+  out <- raster::setValues(x, 0)
 
-  out <- writeStart(out,
+  out <- raster::writeStart(out,
                     filename=filename,
                     format="GTiff",
                     datatype=datatype,
@@ -78,7 +78,7 @@ wpStartRasterize <- function(x,
 
   for (i in 1:blocks$n) {
 
-    d <- recvOneData(cl)
+    d <- parallel::recvOneData(cl)
 
     if (! d$value$success) {
       stop('cluster error')
@@ -90,7 +90,7 @@ wpStartRasterize <- function(x,
 
     wpProgressMessage(i, max=blocks$n, label= paste0("received block ",b, " Processing Time: ", wpTimeDiff(tStart,tEnd)))
 
-    out <- writeValues(out, d$value$value, blocks$row[b])
+    out <- raster:::writeValues(out, d$value$value, blocks$row[b])
 
     # need to send more data
     #
@@ -100,7 +100,7 @@ wpStartRasterize <- function(x,
     }
   }
 
-  out <- writeStop(out)
+  out <- raster::writeStop(out)
 
   return(out)
 }
