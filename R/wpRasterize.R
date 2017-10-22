@@ -96,7 +96,7 @@ wpStartRasterize <- function(x,
     #
     ni <- nodes + i
     if (ni <= blocks$n) {
-      sendCall(cl[[d$node]], clRasteriseFun, ni, tag=ni)
+      parallel::sendCall(cl[[d$node]], clRasteriseFun, ni, tag=ni)
     }
   }
 
