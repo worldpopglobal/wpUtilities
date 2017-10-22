@@ -27,7 +27,7 @@ wpStartRasterize <- function(x,
   layernames <- names(x)
 
 
-  blocks <- raster::blockSize(x,minblocks=minblk)
+  blocks <- raster:::blockSize(x,minblocks=minblk)
 
   cat('\n')
   cat('Rasterising')
@@ -50,10 +50,10 @@ wpStartRasterize <- function(x,
 
         clRasteriseFun <- function(i) {
           # tryCatch({
-                v <- data.frame( raster::getValues(x, row=blocks$row[i], nrows=blocks$nrows[i]) )
+                v <- data.frame( raster:::getValues(x, row=blocks$row[i], nrows=blocks$nrows[i]) )
                 colnames(v) <- c("v1")
                 colnames(df) <- c("v1","v2")
-                v <- plyr::join(v,df,type="left",by = "v1")[-1]
+                v <- plyr:::join(v,df,type="left",by = "v1")[-1]
 
           #  }, error = function(e) return(paste0("The block '", blocks$row[i], "'",
           #                                       " caused the error: '", e, "'")))
@@ -63,12 +63,12 @@ wpStartRasterize <- function(x,
 
   # get all nodes going
   for (i in 1:nodes) {
-    parallel::sendCall(cl[[i]], clRasteriseFun, i, tag=i)
+    parallel:::sendCall(cl[[i]], clRasteriseFun, i, tag=i)
   }
 
-  out <- raster::setValues(x, 0)
+  out <- raster:::setValues(x, 0)
 
-  out <- raster::writeStart(out,
+  out <- raster:::writeStart(out,
                     filename=filename,
                     format="GTiff",
                     datatype=datatype,
@@ -78,7 +78,7 @@ wpStartRasterize <- function(x,
 
   for (i in 1:blocks$n) {
 
-    d <- parallel::recvOneData(cl)
+    d <- parallel:::recvOneData(cl)
 
     if (! d$value$success) {
       stop('cluster error')
@@ -96,11 +96,11 @@ wpStartRasterize <- function(x,
     #
     ni <- nodes + i
     if (ni <= blocks$n) {
-      parallel::sendCall(cl[[d$node]], clRasteriseFun, ni, tag=ni)
+      parallel:::sendCall(cl[[d$node]], clRasteriseFun, ni, tag=ni)
     }
   }
 
-  out <- raster::writeStop(out)
+  out <- raster:::writeStop(out)
 
   return(out)
 }
