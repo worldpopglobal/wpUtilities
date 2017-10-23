@@ -16,11 +16,11 @@ wpGetOS <- function(){
 
         OS <- tolower(sysinf['sysname'])
 
-        if(OS == 'Windows'){
+        if(OS == 'windows'){
 
             return('windows')
 
-        } else if (OS == 'Darwin') {
+        } else if (OS == 'darwin') {
 
             return('osx')
 
