@@ -14,7 +14,7 @@ wpGetOS <- function(){
 
   if (!is.null(sysinf)){
 
-        OS <- sysinf['sysname']
+        OS <- tolower(sysinf['sysname'])
 
         if(OS == 'Windows'){
 
