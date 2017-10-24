@@ -8,7 +8,7 @@ based on a "zones" RasterLayer. NA values are removed.
 Function uses DoParallel library to work with a big raster data}
 \usage{
 wpZonalStatistics(x, y, fun = "mean", cores = NULL, minblk = NULL,
-  silent = TRUE)
+  na.rm = TRUE, silent = TRUE)
 }
 \arguments{
 \item{x}{Raster* object}
@@ -20,6 +20,8 @@ wpZonalStatistics(x, y, fun = "mean", cores = NULL, minblk = NULL,
 \item{cores}{Integer. Number of cores for parallel calculation}
 
 \item{minblk}{Integer. Minimum number of blocks}
+
+\item{na.rm}{using na.rm = TRUE for missing data}
 
 \item{silent}{If FALSE then the progress will be shown}
 }

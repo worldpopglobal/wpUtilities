@@ -12,6 +12,7 @@
 #' @param fun The function to be applied. Either as character: 'mean', 'min', 'max' and 'sum'
 #' @param cores Integer. Number of cores for parallel calculation
 #' @param minblk Integer. Minimum number of blocks
+#' @param na.rm using na.rm = TRUE for missing data
 #' @param silent If FALSE then the progress will be shown
 #' @rdname wpZonalStatistics
 #' @return A data.frame with a value for each zone (unique value in zones)
@@ -19,7 +20,7 @@
 #' @examples
 #' wpZonalStatistics( x=rasterObj1, y=rasterObj2, cores=2, minblk=4  )
 #'
-wpZonalStatistics <- function(x, y, fun='mean', cores=NULL, minblk=NULL, silent=TRUE) {
+wpZonalStatistics <- function(x, y, fun='mean', cores=NULL, minblk=NULL, na.rm=TRUE, silent=TRUE) {
 
   #chack_pkg_load("raster","doParallel")
 
@@ -28,7 +29,7 @@ wpZonalStatistics <- function(x, y, fun='mean', cores=NULL, minblk=NULL, silent=
   if (! fun %in% c('sum', 'mean', 'min', 'max', 'count')) {
     stop("fun can be 'sum', 'mean', 'min', 'max', or 'count'")
   }
-
+  
   # get real physical cores in a computer
   max.cores <- detectCores(logical = TRUE)
 
@@ -55,7 +56,7 @@ wpZonalStatistics <- function(x, y, fun='mean', cores=NULL, minblk=NULL, silent=
   tStart <- Sys.time()
 
   cl <- makeCluster(cores)
-
+  
   # broadcast the data and functions to all worker
   # processes by clusterExport
   # clusterExport(cl, c(x,"y", "blocks"))
@@ -72,17 +73,23 @@ wpZonalStatistics <- function(x, y, fun='mean', cores=NULL, minblk=NULL, silent=
 
     if ( fun == 'mean' ) {
 
-      df.fun <- aggregate(x = (df.x), by = list(df.y[,1]), FUN = 'sum')
-      df.length<- aggregate(x = (df.x), by = list(df.y[,1]), FUN = "length")
+      df.fun <- aggregate(x = (df.x), by = list(df.y[,1]), FUN = 'sum', na.rm=na.rm)
+      df.length<- aggregate(x = (df.x), by = list(df.y[,1]), FUN = function(x, na.rm=na.rm) length(stats::na.omit(x)), na.rm=na.rm)
 
       colnames(df.length) <- c(layernames,'length')
       colnames(df.fun) <- c(layernames,'sum')
 
       df <- merge(df.fun, df.length, all = TRUE, by = layernames)
 
-    } else if ( fun == 'max' | fun == 'min' | fun == 'sum') {
+    } else if ( fun == 'count') {
+      
+      df <- aggregate(x = (df.x), by = list(df.y[,1]), FUN = function(x, na.rm=na.rm) length(stats::na.omit(x)), na.rm=na.rm)
+      
+      colnames(df) <- c(layernames,'count')
+      
+    } else {      
 
-      df <- aggregate(x = (df.x), by = list(df.y[,1]), FUN = fun)
+      df <- aggregate(x = (df.x), by = list(df.y[,1]), FUN = fun, na.rm=na.rm)
 
       colnames(df) <- c(layernames,fun)
     }
@@ -94,14 +101,21 @@ wpZonalStatistics <- function(x, y, fun='mean', cores=NULL, minblk=NULL, silent=
 
   if ( fun == 'mean' ) {
 
-    df1 <- aggregate(x = result$sum, by = list(result[[1]]), FUN = "sum")
-    df2 <- aggregate(x = result$length, by = list(result[[1]]), FUN = "sum")
+    df1 <- aggregate(x = result$sum, by = list(result[[1]]), FUN = 'sum', na.rm=na.rm)
+    df2 <- aggregate(x = result$length, by = list(result[[1]]), FUN = 'sum', na.rm=na.rm)
     df1$x <- df1$x/df2$x
     colnames(df1) <- c(layernames,'mean')
 
+  } else if ( fun == 'count') {
+    
+    df1 <- aggregate(x = result[[2]], by = list(result[[1]]), FUN = 'sum', na.rm=na.rm)
+    
+    colnames(df1) <- c(layernames,'count')
+    
   }else{
 
-    df1 <- aggregate(x = result[[2]], by = list(result[[1]]), FUN = fun)
+    df1 <- aggregate(x = result[[2]], by = list(result[[1]]), FUN = fun, na.rm=na.rm)
+    
     colnames(df1) <- c(layernames,fun)
 
   }
