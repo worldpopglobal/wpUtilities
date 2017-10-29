@@ -66,7 +66,8 @@ wpStartRasterize <- function(x,
     parallel:::sendCall(cl[[i]], clRasteriseFun, i, tag=i)
   }
 
-  out <- raster:::setValues(x, 0)
+  #out <- raster:::setValues(x, 0)
+  out <- x
 
   out <- raster:::writeStart(out,
                     filename=filename,
