@@ -25,9 +25,12 @@ wpZonalStatistics <- function(x, y, fun='mean', cores=NULL, minblk=NULL, na.rm=T
   #chack_pkg_load("raster","doParallel")
 
   fun <- tolower(fun)
+  if(length(fun) > 1){
+    fun <- fun[1]
+  }
 
-  if (! fun %in% c('sum', 'mean', 'min', 'max', 'count')) {
-    stop("fun can be 'sum', 'mean', 'min', 'max', or 'count'")
+  if (! fun %in% c('sum', 'mean', 'sd', 'min', 'max', 'count')) {
+    stop("fun can be 'sum', 'mean', 'sd', 'min', 'max', or 'count'")
   }
   
   # get real physical cores in a computer
@@ -71,15 +74,23 @@ wpZonalStatistics <- function(x, y, fun='mean', cores=NULL, minblk=NULL, na.rm=T
     df.y <- data.frame( getValues(y, row=blocks$row[i], nrows=blocks$nrows[i]) )
 
 
-    if ( fun == 'mean' ) {
+    if ( fun == 'mean' | fun == 'sd' ) {
 
       df.fun <- aggregate(x = (df.x), by = list(df.y[,1]), FUN = 'sum', na.rm=na.rm)
-      df.length<- aggregate(x = (df.x), by = list(df.y[,1]), FUN = function(x, na.rm=na.rm) length(stats::na.omit(x)), na.rm=na.rm)
+      df.length <- aggregate(x = (df.x), by = list(df.y[,1]), FUN = function(x, na.rm=na.rm) length(stats::na.omit(x)), na.rm=na.rm)
 
       colnames(df.length) <- c(layernames,'length')
       colnames(df.fun) <- c(layernames,'sum')
-
+      
       df <- merge(df.fun, df.length, all = TRUE, by = layernames)
+      
+      if (fun == 'sd'){
+        
+        df.sq <- aggregate(x = (df.x^2), by = list(df.y[,1]), FUN='sum', na.rm=na.rm)
+        colnames(df.sq) <- c(layernames,'sq')
+        df <- merge(df, df.sq, all=TRUE, by=layernames)
+        
+      }
 
     } else if ( fun == 'count') {
       
@@ -99,12 +110,23 @@ wpZonalStatistics <- function(x, y, fun='mean', cores=NULL, minblk=NULL, na.rm=T
 
   stopCluster(cl)
 
-  if ( fun == 'mean' ) {
+  if ( fun == 'mean' | fun == 'sd') {
 
     df1 <- aggregate(x = result$sum, by = list(result[[1]]), FUN = 'sum', na.rm=na.rm)
     df2 <- aggregate(x = result$length, by = list(result[[1]]), FUN = 'sum', na.rm=na.rm)
-    df1$x <- df1$x/df2$x
-    colnames(df1) <- c(layernames,'mean')
+    df1$x <- df1$x / df2$x
+    
+    if (fun == 'sd'){
+      
+      df3 <- aggregate(x = result$sq, by = list(result[[1]]), FUN = 'sum', na.rm=na.rm)
+      df1$x <- sqrt(( (df3$x / df2$x) - (df1$x)^2 ) * (df2$x / (df2$x - 1)))
+      colnames(df1) <- c(layernames, 'sd')
+      
+    } else{
+      
+      colnames(df1) <- c(layernames,'mean')
+      
+    }
 
   } else if ( fun == 'count') {
     
